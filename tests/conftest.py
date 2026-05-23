@@ -12,7 +12,6 @@ from selenium.webdriver.chrome.options import Options
 
 
 def pytest_addoption(parser):
-    # Параметры должны точно совпадать с теми, что передаются в Jenkins
     parser.addoption(
         "--headless",
         default="false",
@@ -56,7 +55,6 @@ def setup_browser(request):
     hub_login = os.getenv("SELENOID_LOGIN")
     hub_password = os.getenv("SELENOID_PASSWORD")
 
-    # Получаем значения параметров
     headless_flag = request.config.getoption("--headless") == "true"
     browser_name = request.config.getoption("--browser")
     browser_version = request.config.getoption("--browser_version")
@@ -64,9 +62,7 @@ def setup_browser(request):
     selenoid_url = request.config.getoption("--selenoid-url")
     window_size = request.config.getoption("--window-size")
 
-    # Проверяем, запускаем локально или через Selenoid
     if not hub_login or not hub_password:
-        # Локальный запуск
         from selenium.webdriver.chrome.service import Service
         from webdriver_manager.chrome import ChromeDriverManager
 
@@ -92,7 +88,6 @@ def setup_browser(request):
 
         driver.quit()
     else:
-        # Запуск через Selenoid
         options = Options()
 
         if headless_flag:

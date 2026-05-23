@@ -1,9 +1,10 @@
 import allure
 from selene import have, command
-from selene.core.command import select_all
 from selene.support.shared import browser
+
 import utils
 from data.users import Paticipant
+
 
 class PracticeFormPage:
 
@@ -54,15 +55,19 @@ class PracticeFormPage:
     @allure.step("Выбрать хобби")
     def choose_hobby(self, hobby):
         hobby_map = {
-            "Sports": '[for="hobbies-checkbox-1"]',
-            "Reading": '[for="hobbies-checkbox-2"]',
-            "Music": '[for="hobbies-checkbox-3"]'
+            "Sports": "hobbies-checkbox-1",
+            "Reading": "hobbies-checkbox-2",
+            "Music": "hobbies-checkbox-3"
         }
-        hobby_id = hobby_map.get(hobby)
-        if hobby_id:
-            # Используем JavaScript для клика
-            script = f'document.getElementById("hobbies-checkbox-{hobby_id}").click()'
-            browser.execute_script(script)
+        element_id = hobby_map.get(hobby)
+        if element_id:
+            # Прокручиваем к элементу
+            browser.element(f'#{element_id}').perform(command.js.scroll_into_view)
+            # Ждем небольшую паузу
+            import time
+            time.sleep(0.5)
+            # Кликаем по связанному лейблу (более надежно)
+            browser.element(f'[for="{element_id}"]').click()
 
     @allure.step("Загрузить изображение")
     def attach_picture(self, filename):
@@ -100,12 +105,17 @@ class PracticeFormPage:
         self.set_phone(participant.phone_number)
         self.set_birthdate(participant.birth_year, participant.birth_month, participant.birth_day)
         self.pick_subject(participant.favorite_subject)
+
+        # Обработка хобби с паузой
+        import time
+        time.sleep(0.5)
         self.choose_hobby(participant.free_time.value)
+
         self.attach_picture(participant.avatar_path)
         self.type_current_address(participant.living_address)
         self.select_region(participant.region)
         self.select_city(participant.settlement)
-        self.press_submit_button()
+        self.press_submit_btn()
 
     @allure.step("Валидация заполненных данных")
     def check_registration_result(self, participant: Paticipant):
@@ -122,4 +132,3 @@ class PracticeFormPage:
             participant.region + " " + participant.settlement
         ]
         browser.element('.table').all('td').even.should(have.exact_texts(excpected_data))
-
