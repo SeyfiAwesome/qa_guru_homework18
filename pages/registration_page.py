@@ -58,6 +58,11 @@ class PracticeFormPage:
             "Reading": '[for="hobbies-checkbox-2"]',
             "Music": '[for="hobbies-checkbox-3"]'
         }
+        hobby_id = hobby_map.get(hobby)
+        if hobby_id:
+            # Используем JavaScript для клика
+            script = f'document.getElementById("hobbies-checkbox-{hobby_id}").click()'
+            browser.execute_script(script)
 
     @allure.step("Загрузить изображение")
     def attach_picture(self, filename):
