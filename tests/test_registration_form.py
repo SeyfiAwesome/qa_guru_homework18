@@ -16,7 +16,7 @@ class TestRegistrationSuite:
             "day": "15",
             "subject_name": "Computer Science",
             "hobby_selection": Interests.MUSIC,
-            "picture_file": "file.pdf",
+            "picture_file": "test_file.pdf",
             "home_address": "г. Москва, ул. Ленина, д. 10",
             "state_name": "Rajasthan",
             "city_name": "Jaipur"
