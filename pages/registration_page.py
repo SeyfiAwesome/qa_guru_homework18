@@ -116,5 +116,5 @@ class PracticeFormPage:
             participant.living_address,
             participant.region + " " + participant.settlement
         ]
-        browser.element('.table').all('td').even.sould(have.exact_texts(excpected_data))
+        browser.element('.table').all('td').even.should(have.exact_texts(excpected_data))
 
