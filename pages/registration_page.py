@@ -93,7 +93,7 @@ class PracticeFormPage:
         ).click()
 
     @allure.step("Отправить анкету")
-    def press_submit_button(self):
+    def press_submit_btn(self):
         browser.element("#submit").click()
 
     @allure.step("Комплексное заполнение анкеты")
