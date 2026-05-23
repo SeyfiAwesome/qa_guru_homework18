@@ -1,10 +1,10 @@
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 import attach
-import os
 from dotenv import load_dotenv
 from selene import browser
 from selenium import webdriver
@@ -12,34 +12,35 @@ from selenium.webdriver.chrome.options import Options
 
 
 def pytest_addoption(parser):
+    # Параметры должны точно совпадать с теми, что передаются в Jenkins
     parser.addoption(
-        "--browser_mode",
-        default="normal",
-        choices=("normal", "invisible"),
-        help="Run browser in normal or headless mode"
+        "--headless",
+        default="false",
+        choices=("true", "false"),
+        help="Run browser in headless mode"
     )
     parser.addoption(
-        "--test_browser",
+        "--browser",
         default="chrome",
         help="Browser to use for testing"
     )
     parser.addoption(
-        "--browser_ver",
+        "--browser_version",
         default="128.0",
         help="Version of the test browser"
     )
     parser.addoption(
-        "--app_url",
+        "--base-url",
         default="https://demoqa.com",
         help="Base application URL"
     )
     parser.addoption(
-        "--remote_hub",
+        "--selenoid-url",
         default="selenoid.autotests.cloud/wd/hub",
         help="Selenoid hub URL"
     )
     parser.addoption(
-        "--screen_resolution",
+        "--window-size",
         default="1920,1080",
         choices=(
             "1920,1080",
@@ -51,9 +52,17 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope='function', autouse=True)
-def manage_browser(request):
+def setup_browser(request):
     hub_login = os.getenv("SELENOID_LOGIN")
     hub_password = os.getenv("SELENOID_PASSWORD")
+
+    # Получаем значения параметров
+    headless_flag = request.config.getoption("--headless") == "true"
+    browser_name = request.config.getoption("--browser")
+    browser_version = request.config.getoption("--browser_version")
+    base_url = request.config.getoption("--base-url")
+    selenoid_url = request.config.getoption("--selenoid-url")
+    window_size = request.config.getoption("--window-size")
 
     # Проверяем, запускаем локально или через Selenoid
     if not hub_login or not hub_password:
@@ -61,76 +70,64 @@ def manage_browser(request):
         from selenium.webdriver.chrome.service import Service
         from webdriver_manager.chrome import ChromeDriverManager
 
-        target_browser = request.config.getoption("--test_browser")
-        invisible_mode = request.config.getoption("--browser_mode") == "invisible"
-        viewport = request.config.getoption("--screen_resolution")
-        site_base = request.config.getoption("--app_url")
+        options = Options()
 
-        browser_prefs = Options()
+        if headless_flag:
+            options.add_argument("--headless")
 
-        if invisible_mode:
-            browser_prefs.add_argument("--headless")
-
-        browser_prefs.add_argument(f"--window-size={viewport}")
+        options.add_argument(f"--window-size={window_size}")
 
         service = Service(ChromeDriverManager().install())
-        web_driver = webdriver.Chrome(service=service, options=browser_prefs)
+        driver = webdriver.Chrome(service=service, options=options)
 
-        browser.config.driver = web_driver
-        browser.config.base_url = site_base
+        browser.config.driver = driver
+        browser.config.base_url = base_url
 
         yield browser
 
-        attach.take_screenshot(web_driver)
-        attach.save_page_html(web_driver)
-        attach.save_browser_logs(web_driver)
-        attach.add_test_video(web_driver)
+        attach.take_screenshot(driver)
+        attach.save_page_html(driver)
+        attach.save_browser_logs(driver)
+        attach.add_test_video(driver)
 
-        web_driver.quit()
+        driver.quit()
     else:
         # Запуск через Selenoid
-        target_browser = request.config.getoption("--test_browser")
-        target_version = request.config.getoption("--browser_ver")
-        invisible_mode = request.config.getoption("--browser_mode") == "invisible"
-        site_base = request.config.getoption("--app_url")
-        selenoid_endpoint = request.config.getoption("--remote_hub")
-        viewport = request.config.getoption("--screen_resolution")
+        options = Options()
 
-        browser_prefs = Options()
+        if headless_flag:
+            options.add_argument("--headless")
 
-        if invisible_mode:
-            browser_prefs.add_argument("--headless")
+        options.add_argument(f"--window-size={window_size}")
 
-        browser_prefs.add_argument(f"--window-size={viewport}")
-
-        remote_capabilities = {
-            "browserName": target_browser,
-            "browserVersion": target_version,
+        selenoid_capabilities = {
+            "browserName": browser_name,
+            "browserVersion": browser_version,
             "selenoid:options": {
                 "enableVNC": True,
                 "enableVideo": True
             }
         }
-        browser_prefs.capabilities.update(remote_capabilities)
+        options.capabilities.update(selenoid_capabilities)
 
-        web_driver = webdriver.Remote(
-            command_executor=f"https://{hub_login}:{hub_password}@{selenoid_endpoint}",
-            options=browser_prefs
+        driver = webdriver.Remote(
+            command_executor=f"https://{hub_login}:{hub_password}@{selenoid_url}",
+            options=options
         )
 
-        browser.config.driver = web_driver
-        browser.config.base_url = site_base
+        browser.config.driver = driver
+        browser.config.base_url = base_url
 
         yield browser
 
-        attach.take_screenshot(web_driver)
-        attach.save_page_html(web_driver)
-        attach.save_browser_logs(web_driver)
-        attach.add_test_video(web_driver)
+        attach.take_screenshot(driver)
+        attach.save_page_html(driver)
+        attach.save_browser_logs(driver)
+        attach.add_test_video(driver)
 
-        web_driver.quit()
+        driver.quit()
 
 
 @pytest.fixture(scope="session", autouse=True)
-def load_environment():
+def load_env():
     load_dotenv()
